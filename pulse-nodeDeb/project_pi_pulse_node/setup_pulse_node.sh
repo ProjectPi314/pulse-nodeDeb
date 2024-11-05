@@ -357,55 +357,74 @@ python3.10 -m venv test_env
 
 echo -e "${GREEN}Setup complete!${NC}"
 
+# Define color variables (optional)
+GREEN='\033[0;32m'
+NC='\033[0m'
 
-# Downloading Docker
-echo -e "${GREEN}Adding Docker PPA and installing Docker${NC}"
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+# Download and install Docker for Debian
+echo -e "${GREEN}Adding Docker repository and installing Docker...${NC}"
+curl -fsSL https://download.docker.com/linux/debian/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
 echo \
-"deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
+"deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian \
 $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-echo ""
+
+# Update package list
 sudo apt-get update -y
 echo ""
-sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose
+
+# Install Docker packages
+sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
 echo ""
-clear
-echo -e "${GREEN}Starting and enabling docker service${NC}"
+
+# Start and enable Docker service
+echo -e "${GREEN}Starting and enabling Docker service...${NC}"
 sudo systemctl start docker
 sudo systemctl enable docker
 
-# Adding Main user to the Docker group
-add_user_to_docker_group
+# Add the main user to the Docker group for non-root access
+echo -e "${GREEN}Adding main user to the Docker group...${NC}"
+sudo groupadd docker || echo "Docker group already exists"  # Create docker group if it doesn’t exist
+sudo usermod -aG docker $USER
 
+# Define your custom path and client variables here
+CUSTOM_PATH="/blockchain"
+ETH_CLIENT="geth"
+CONSENSUS_CLIENT="lighthouse"
 
-echo -e "${GREEN}Creating ${CUSTOM_PATH} Main-Folder${NC}"
-sudo mkdir "${CUSTOM_PATH}"
-echo ""
-echo -e "${GREEN}Generating jwt.hex secret${NC}"
+# Create the main custom path
+echo -e "${GREEN}Creating ${CUSTOM_PATH} main folder...${NC}"
+sudo mkdir -p "${CUSTOM_PATH}"
+
+# Generate jwt.hex secret
+echo -e "${GREEN}Generating jwt.hex secret...${NC}"
 sudo sh -c "openssl rand -hex 32 | tr -d '\n' > ${CUSTOM_PATH}/jwt.hex"
-echo ""
-echo -e "${GREEN}Creating subFolders for ${ETH_CLIENT} and ${CONSENSUS_CLIENT}${NC}"
-sudo mkdir -p "${CUSTOM_PATH}/execution/$ETH_CLIENT"
-sudo mkdir -p "${CUSTOM_PATH}/consensus/$CONSENSUS_CLIENT"
-echo ""
 
-get_main_user
+# Create subfolders for Ethereum and Consensus clients
+echo -e "${GREEN}Creating subfolders for ${ETH_CLIENT} and ${CONSENSUS_CLIENT}...${NC}"
+sudo mkdir -p "${CUSTOM_PATH}/execution/${ETH_CLIENT}"
+sudo mkdir -p "${CUSTOM_PATH}/consensus/${CONSENSUS_CLIENT}"
 
-echo -e "${GREEN}Creating the users ${ETH_CLIENT} and ${CONSENSUS_CLIENT} and setting permissions to the folders${NC}"
+# Add users for Ethereum and Consensus clients
+echo -e "${GREEN}Creating users ${ETH_CLIENT} and ${CONSENSUS_CLIENT}, and setting folder permissions...${NC}"
+sudo useradd -M -G docker $ETH_CLIENT || echo "User ${ETH_CLIENT} already exists"
+sudo useradd -M -G docker $CONSENSUS_CLIENT || echo "User ${CONSENSUS_CLIENT} already exists"
 
-sudo useradd -M -G docker $ETH_CLIENT
-sudo useradd -M -G docker $CONSENSUS_CLIENT
-
+# Set permissions for execution and consensus folders
 sudo chown -R ${ETH_CLIENT}:docker "${CUSTOM_PATH}/execution"
 sudo chmod -R 750 "${CUSTOM_PATH}/execution"
-
-sudo chown -R ${CONSENSUS_CLIENT}:docker "${CUSTOM_PATH}/consensus/"
+sudo chown -R ${CONSENSUS_CLIENT}:docker "${CUSTOM_PATH}/consensus"
 sudo chmod -R 750 "${CUSTOM_PATH}/consensus"
 
-press_enter_to_continue
+# Create shared group to access jwt.hex file
+echo -e "${GREEN}Creating shared group for access to jwt.hex file...${NC}"
+sudo chgrp docker "${CUSTOM_PATH}/jwt.hex"
+sudo chmod 640 "${CUSTOM_PATH}/jwt.hex"
 
+# Prompt to continue
+read -p "Press Enter to continue..."
 
-echo "Creating shared group to access jwt.hex file"
+echo -e "${GREEN}Setup complete! Please log out and log back in for Docker group changes to take effect.${NC}"
+
 
 # Permission Madness
 # defining group for jwt.hex file
