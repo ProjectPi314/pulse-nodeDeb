@@ -325,28 +325,26 @@ sudo apt-get install -y \
     lsb-release \
     dbus-x11
 
-# Check if Python 3.10 is available in Debian repositories and install if available
-echo -e "${GREEN}Attempting to install Python 3.10 from Debian repositories...${NC}"
-sudo apt-get install -y python3.10 python3.10-venv python3.10-dev python3-pip || {
+# Attempt to install Python 3 (latest available) from Debian repositories
+echo -e "${GREEN}Installing the latest available Python 3 version from Debian repositories...${NC}"
+sudo apt-get install -y python3 python3-venv python3-dev python3-pip
 
-    echo -e "${GREEN}Python 3.10 not found in Debian repositories. Installing from source...${NC}"
-
-    # Install dependencies for building Python from source
-    sudo apt-get install -y build-essential zlib1g-dev libssl-dev libncurses5-dev \
+# Install Python 3.10 from source if specifically required
+echo -e "${GREEN}Installing Python 3.10 from source...${NC}"
+sudo apt-get install -y build-essential zlib1g-dev libssl-dev libncurses5-dev \
     libgdbm-dev libnss3-dev libreadline-dev libffi-dev libsqlite3-dev wget
 
-    # Download and compile Python 3.10 from source
-    wget https://www.python.org/ftp/python/3.10.0/Python-3.10.0.tgz
-    tar -xf Python-3.10.0.tgz
-    cd Python-3.10.0
-    ./configure --enable-optimizations
-    make -j $(nproc)
-    sudo make altinstall
+# Download and compile Python 3.10
+wget https://www.python.org/ftp/python/3.10.0/Python-3.10.0.tgz
+tar -xf Python-3.10.0.tgz
+cd Python-3.10.0
+./configure --enable-optimizations
+make -j $(nproc)
+sudo make altinstall
 
-    # Clean up source files
-    cd ..
-    rm -rf Python-3.10.0 Python-3.10.0.tgz
-}
+# Clean up source files
+cd ..
+rm -rf Python-3.10.0 Python-3.10.0.tgz
 
 # Verify Python 3.10 installation
 echo -e "${GREEN}Python version installed:${NC}"
